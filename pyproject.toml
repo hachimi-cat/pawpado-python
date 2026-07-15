@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pawpado"
+version = "0.1.0"
+description = "Official Python SDK for Pawpado — single-user AWS GPU gaming portal. Sessions (start/stop/poll/pair/connect), credits, billing, settings, admin. Bearer auth via Huudis OIDC device flow."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+keywords = ["pawpado", "forjio", "aws", "gpu", "gaming", "huudis"]
+authors = [{ name = "Forjio", email = "hello@pawpado.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Internet :: WWW/HTTP",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.27.0",
+  "PyJWT[crypto]>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "respx>=0.21",
+]
+
+[project.urls]
+Homepage = "https://pawpado.com"
+Source = "https://github.com/hachimi-cat/pawpado-python"
+Issues = "https://github.com/hachimi-cat/pawpado-python/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pawpado"]
