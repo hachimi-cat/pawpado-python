@@ -3,15 +3,17 @@
 Mirrors the Node SDK (`@forjio/pawpado-node`):
 
 - :class:`PawpadoClient` — sessions / credits / billing / settings / account /
-  admin / health, with Bearer auth via either a :class:`Session` (Huudis OIDC
-  device flow + refresh) or a static ``api_key``.
+  health, and ``client.api`` (every route, generated from the API spec), with Bearer
+  auth via either a :class:`Session` (Huudis OIDC device flow + refresh) or an
+  ``api_key`` (a ``paw_live_…`` key, or a Huudis access token).
 - :class:`Session` — multi-profile credentials store with single-flight refresh,
   the Python parity of ``@forjio/sdk``'s Session.
 - :class:`ApiClient` — typed HTTP client with envelope unwrap, proactive +
   reactive token refresh, and auto-pagination.
 """
 
-from .client import PawpadoClient
+from .api_generated import GeneratedApi
+from .client import PawpadoApi, PawpadoClient
 from .errors import (
     ApiError,
     NetworkError,
@@ -21,7 +23,6 @@ from .errors import (
 )
 from .resources import (
     AccountResources,
-    AdminResources,
     ApiClient,
     BillingResources,
     CreditsResources,
@@ -34,6 +35,8 @@ from .session import ProfileData, Session
 __all__ = [
     # client
     "PawpadoClient",
+    "PawpadoApi",
+    "GeneratedApi",
     # errors
     "ApiError",
     "NetworkError",
@@ -43,7 +46,6 @@ __all__ = [
     # resources
     "ApiClient",
     "AccountResources",
-    "AdminResources",
     "BillingResources",
     "CreditsResources",
     "SessionsResources",
@@ -54,4 +56,4 @@ __all__ = [
     "Session",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

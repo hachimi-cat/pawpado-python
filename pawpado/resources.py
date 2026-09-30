@@ -235,18 +235,36 @@ def _opts(auth_token: Optional[str]) -> Dict[str, Any]:
     return {"auth_token": auth_token} if auth_token else {}
 
 
+# Each method takes an optional ``auth_token`` (an API key or a Huudis access token) that
+# overrides the client's own credentials. Every other route: ``client.api``.
+
+
 class SessionsResources(_Namespace):
     def start(self, *, auth_token: Optional[str] = None):
         return self.api.post("/api/v1/sessions/start", None, **_opts(auth_token))
 
     def stop(self, body: Optional[Dict[str, Any]] = None, *, auth_token: Optional[str] = None):
+        """``body``: ``{"force": True}`` re-issues the stop forcefully."""
         return self.api.post("/api/v1/sessions/stop", body or {}, **_opts(auth_token))
 
     def poll(self, *, auth_token: Optional[str] = None):
         return self.api.get("/api/v1/sessions/poll", **_opts(auth_token))
 
-    def pair(self, *, auth_token: Optional[str] = None):
-        return self.api.post("/api/v1/sessions/pair", None, **_opts(auth_token))
+    def pair(
+        self,
+        pin: str,
+        *,
+        device_name: Optional[str] = None,
+        via: Optional[str] = None,
+        auth_token: Optional[str] = None,
+    ):
+        """Pair a Moonlight client: send the 4-digit PIN it shows. ``via``: desktop or mobile."""
+        body: Dict[str, Any] = {"pin": pin}
+        if device_name is not None:
+            body["deviceName"] = device_name
+        if via is not None:
+            body["via"] = via
+        return self.api.post("/api/v1/sessions/pair", body, **_opts(auth_token))
 
     def connect(self, *, auth_token: Optional[str] = None):
         return self.api.get("/api/v1/sessions/connect", **_opts(auth_token))
@@ -259,37 +277,66 @@ class CreditsResources(_Namespace):
     def me(self, *, auth_token: Optional[str] = None):
         return self.api.get("/api/v1/credits/me", **_opts(auth_token))
 
-    def topup(self, body: Dict[str, Any], *, auth_token: Optional[str] = None):
+    def topup(
+        self,
+        *,
+        amount_idr: Optional[int] = None,
+        amount_usd_cents: Optional[int] = None,
+        auth_token: Optional[str] = None,
+    ):
+        """Start a checkout: an IDR amount, or USD cents (PayPal). Owner/admin only (an API
+        key: the role of the person who made it)."""
+        if (amount_idr is None) == (amount_usd_cents is None):
+            raise ValueError("topup needs exactly one of amount_idr or amount_usd_cents")
+        body = {"amountIdr": amount_idr} if amount_idr is not None else {"amountUsdCents": amount_usd_cents}
         return self.api.post("/api/v1/credits/topup", body, **_opts(auth_token))
 
 
 class BillingResources(_Namespace):
     def storage(self, *, auth_token: Optional[str] = None):
+        """The storage sizes on offer: ``{"presets": [...], "min": ..., "max": ...}`` (GB)."""
         return self.api.get("/api/v1/billing/storage", **_opts(auth_token))
+
+    def resize_storage(self, storage_gb: int, *, auth_token: Optional[str] = None):
+        """Grow the workspace's disk (owner/admin; disks only grow)."""
+        return self.api.post("/api/v1/billing/storage", {"storageGb": storage_gb}, **_opts(auth_token))
+
+
+_UNSET: Any = object()
 
 
 class SettingsResources(_Namespace):
     def get(self, *, auth_token: Optional[str] = None):
         return self.api.get("/api/v1/settings", **_opts(auth_token))
 
-    def update(self, patch: Dict[str, Any], *, auth_token: Optional[str] = None):
+    def update(
+        self,
+        *,
+        idle_auto_stop_minutes: Any = _UNSET,
+        play_mode: Optional[str] = None,
+        launch_options: Optional[Dict[str, Any]] = None,
+        auth_token: Optional[str] = None,
+    ):
+        """Send only what changes. ``idle_auto_stop_minutes=None`` turns idle auto-stop off;
+        ``play_mode``: browser or moonlight; ``launch_options``: fps, hdr, transport, …"""
+        patch: Dict[str, Any] = {}
+        if idle_auto_stop_minutes is not _UNSET:
+            patch["idleAutoStopMinutes"] = idle_auto_stop_minutes
+        if play_mode is not None:
+            patch["playMode"] = play_mode
+        if launch_options is not None:
+            patch["launchOptions"] = launch_options
+        if not patch:
+            raise ValueError("update needs at least one of idle_auto_stop_minutes, play_mode, launch_options")
         return self.api.patch("/api/v1/settings", patch, **_opts(auth_token))
 
 
 class AccountResources(_Namespace):
-    def session(self, *, auth_token: Optional[str] = None):
-        return self.api.get("/api/v1/session", **_opts(auth_token))
-
     def delete(self, *, auth_token: Optional[str] = None):
-        return self.api.delete("/api/v1/account/delete", **_opts(auth_token))
-
-
-class AdminResources(_Namespace):
-    def reconcile(self, *, auth_token: Optional[str] = None):
-        return self.api.post("/api/v1/admin/reconcile", None, **_opts(auth_token))
-
-    def orphans(self, *, auth_token: Optional[str] = None):
-        return self.api.get("/api/v1/admin/orphans", **_opts(auth_token))
+        """Delete the account. Person-only: Pawpado accepts it from the signed-in browser
+        session alone — an API key or a Huudis token gets 401, so a leaked key cannot lock
+        the owner out."""
+        return self.api.post("/api/v1/account/delete", {"confirm": "DELETE"}, **_opts(auth_token))
 
 
 def build_resources(api: ApiClient) -> Dict[str, _Namespace]:
@@ -299,5 +346,4 @@ def build_resources(api: ApiClient) -> Dict[str, _Namespace]:
         "billing": BillingResources(api),
         "settings": SettingsResources(api),
         "account": AccountResources(api),
-        "admin": AdminResources(api),
     }

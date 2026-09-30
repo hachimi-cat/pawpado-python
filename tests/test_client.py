@@ -54,7 +54,8 @@ def test_client_construction_defaults():
     assert c.base_url == "https://pawpado.com"
     # All resource namespaces exist
     assert c.sessions and c.credits and c.billing
-    assert c.settings and c.account and c.admin
+    assert c.settings and c.account
+    assert not hasattr(c, "admin")  # operator-only; not in the public SDK
 
 
 # ─── Bearer auth via api_key ─────────────────────────────────────────────
@@ -99,8 +100,8 @@ def test_sessions_stop_post_with_body(mock):
 
 def test_sessions_pair_post(mock):
     route = _ok_route(mock, "POST", "/api/v1/sessions/pair")
-    PawpadoClient(base_url=BASE, api_key="t").sessions.pair()
-    assert route.called
+    PawpadoClient(base_url=BASE, api_key="t").sessions.pair("1234", via="mobile")
+    assert json.loads(route.calls.last.request.content) == {"pin": "1234", "via": "mobile"}
 
 
 def test_sessions_connect_get(mock):
@@ -123,11 +124,19 @@ def test_credits_me_get(mock):
 
 def test_credits_topup_post(mock):
     route = _ok_route(mock, "POST", "/api/v1/credits/topup")
-    PawpadoClient(base_url=BASE, api_key="t").credits.topup(
-        {"amountCents": 50000, "currency": "IDR"},
-    )
-    body = json.loads(route.calls.last.request.content)
-    assert body == {"amountCents": 50000, "currency": "IDR"}
+    client = PawpadoClient(base_url=BASE, api_key="t")
+    client.credits.topup(amount_idr=100_000)
+    assert json.loads(route.calls.last.request.content) == {"amountIdr": 100_000}
+    client.credits.topup(amount_usd_cents=1_000)
+    assert json.loads(route.calls.last.request.content) == {"amountUsdCents": 1_000}
+    with pytest.raises(ValueError):
+        client.credits.topup()
+
+
+def test_billing_resize_storage_post(mock):
+    route = _ok_route(mock, "POST", "/api/v1/billing/storage")
+    PawpadoClient(base_url=BASE, api_key="t").billing.resize_storage(200)
+    assert json.loads(route.calls.last.request.content) == {"storageGb": 200}
 
 
 def test_billing_storage_get(mock):
@@ -144,33 +153,20 @@ def test_settings_get(mock):
 
 def test_settings_update_patches(mock):
     route = _ok_route(mock, "PATCH", "/api/v1/settings")
-    PawpadoClient(base_url=BASE, api_key="t").settings.update({"autoStopMinutes": 30})
+    PawpadoClient(base_url=BASE, api_key="t").settings.update(
+        idle_auto_stop_minutes=None, play_mode="moonlight", launch_options={"fps": 60},
+    )
     assert route.calls.last.request.method == "PATCH"
-    assert json.loads(route.calls.last.request.content) == {"autoStopMinutes": 30}
-
-
-def test_account_session_get(mock):
-    route = _ok_route(mock, "GET", "/api/v1/session")
-    PawpadoClient(base_url=BASE, api_key="t").account.session()
-    assert route.called
+    assert json.loads(route.calls.last.request.content) == {
+        "idleAutoStopMinutes": None, "playMode": "moonlight", "launchOptions": {"fps": 60},
+    }
 
 
 def test_account_delete(mock):
-    route = _ok_route(mock, "DELETE", "/api/v1/account/delete")
+    route = _ok_route(mock, "POST", "/api/v1/account/delete")
     PawpadoClient(base_url=BASE, api_key="t").account.delete()
-    assert route.calls.last.request.method == "DELETE"
-
-
-def test_admin_reconcile_post(mock):
-    route = _ok_route(mock, "POST", "/api/v1/admin/reconcile")
-    PawpadoClient(base_url=BASE, api_key="t").admin.reconcile()
-    assert route.called
-
-
-def test_admin_orphans_get(mock):
-    route = _ok_route(mock, "GET", "/api/v1/admin/orphans")
-    PawpadoClient(base_url=BASE, api_key="t").admin.orphans()
-    assert route.called
+    assert route.calls.last.request.method == "POST"
+    assert json.loads(route.calls.last.request.content) == {"confirm": "DELETE"}
 
 
 def test_health_no_auth(mock):
