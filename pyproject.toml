@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pawpado"
-version = "0.2.0"
+version = "0.3.0"
 description = "Official Python SDK for Pawpado — single-user AWS GPU gaming portal. Sessions (start/stop/poll/pair/connect), credits, billing, settings, and every route as client.api. Bearer auth: a Pawpado API key or Huudis OIDC device flow."
 readme = "README.md"
 license = { text = "MIT" }

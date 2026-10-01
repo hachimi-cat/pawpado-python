@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 
 class GeneratedApi:
-    """All 38 feature routes of the Pawpado API."""
+    """All 42 feature routes of the Pawpado API."""
 
     def __init__(self, client: Any) -> None:
         self._client = client
@@ -278,8 +278,8 @@ class GeneratedApi:
         """What the Play grid renders. (GET /api/v1/stream/apps)."""
         return self._call("GET", f"/api/v1/stream/apps", {}, None)
 
-    def webhooks_create(self, *, url: Optional[str] = None, events: Optional[List[Any]] = None, json_body: Optional[Dict[str, Any]] = None) -> Any:
-        """Add an endpoint; the response carries its signing secret once. (POST /api/v1/webhooks).
+    def webhooks_create(self, *, url: Optional[str] = None, events: Optional[Any] = None, json_body: Optional[Dict[str, Any]] = None) -> Any:
+        """Add a subscription: an https `url` (not a private, loopback or link-local address) and `events` — "*", event types from GET /api/v1/webhooks/event-types, or prefixes like "pawpado.session.*" (default  (POST /api/v1/webhooks).
         
         Body fields are keyword arguments; `json_body=` passes the whole body (fields override it)."""
         payload: Dict[str, Any] = dict(json_body or {})
@@ -287,27 +287,43 @@ class GeneratedApi:
             payload["url"] = url
         if events is not None:
             payload["events"] = events
-        if "url" not in payload:
-            raise ValueError("webhooks_create needs url")
         return self._call("POST", f"/api/v1/webhooks", {}, payload)
 
     def webhooks_delete(self, id_: str) -> Any:
-        """Remove an endpoint. (DELETE /api/v1/webhooks/{id})."""
+        """Remove a subscription (and its delivery log). (DELETE /api/v1/webhooks/{id})."""
         return self._call("DELETE", f"/api/v1/webhooks/{_q(id_)}", {}, None)
 
+    def webhooks_deliveries(self, *, limit: Optional[int] = None, status: Optional[str] = None, cursor: Optional[str] = None, subscription_id: Optional[str] = None, type_: Optional[str] = None) -> Any:
+        """The delivery log, newest first: one row per event per subscription, with its status (pending, succeeded, failed), attempt count, next retry, the body sent (`payload`) and every attempt made (`attemptL (GET /api/v1/webhooks/deliveries)."""
+        return self._call("GET", f"/api/v1/webhooks/deliveries", {"limit": limit, "status": status, "cursor": cursor, "subscriptionId": subscription_id, "type": type_}, None)
+
+    def webhooks_deliveries_retry(self, delivery_id: str) -> Any:
+        """One more attempt now, at a failed delivery (or to send a succeeded one again). (POST /api/v1/webhooks/deliveries/{deliveryId}/retry)."""
+        return self._call("POST", f"/api/v1/webhooks/deliveries/{_q(delivery_id)}/retry", {}, None)
+
+    def webhooks_event_types(self) -> Any:
+        """Every event type Pawpado delivers, with what it means: what a subscription's `events` can name (besides "*" and prefixes such as "pawpado.session.*"). (GET /api/v1/webhooks/event-types)."""
+        return self._call("GET", f"/api/v1/webhooks/event-types", {}, None)
+
+    def webhooks_get_deliveries(self, delivery_id: str) -> Any:
+        """One delivery, with every attempt made at it. (GET /api/v1/webhooks/deliveries/{deliveryId})."""
+        return self._call("GET", f"/api/v1/webhooks/deliveries/{_q(delivery_id)}", {}, None)
+
     def webhooks_list(self) -> Any:
-        """The workspace's webhook endpoints. (GET /api/v1/webhooks)."""
+        """The workspace's webhook subscriptions, each with its failure streak (consecutiveFailures, failingSince) and, when Pawpado switched it off for failing, disabledAt and disabledReason. (GET /api/v1/webhooks)."""
         return self._call("GET", f"/api/v1/webhooks", {}, None)
 
-    def webhooks_update(self, id_: str, *, active: Optional[bool] = None, json_body: Optional[Dict[str, Any]] = None) -> Any:
-        """Pause or resume an endpoint. (PATCH /api/v1/webhooks/{id}).
+    def webhooks_update(self, id_: str, *, url: Optional[str] = None, events: Optional[Any] = None, active: Optional[bool] = None, json_body: Optional[Dict[str, Any]] = None) -> Any:
+        """Change a subscription: `url`, `events`, `active` (only the ones given). (PATCH /api/v1/webhooks/{id}).
         
         Body fields are keyword arguments; `json_body=` passes the whole body (fields override it)."""
         payload: Dict[str, Any] = dict(json_body or {})
+        if url is not None:
+            payload["url"] = url
+        if events is not None:
+            payload["events"] = events
         if active is not None:
             payload["active"] = active
-        if "active" not in payload:
-            raise ValueError("webhooks_update needs active")
         return self._call("PATCH", f"/api/v1/webhooks/{_q(id_)}", {}, payload)
 
 

@@ -31,6 +31,7 @@ from .resources import (
     build_resources,
 )
 from .session import ProfileData, Session
+from .webhooks import PawpadoWebhookError, verify_webhook, verify_webhook_signature
 
 __all__ = [
     # client
@@ -54,6 +55,10 @@ __all__ = [
     # session
     "ProfileData",
     "Session",
+    # webhooks
+    "PawpadoWebhookError",
+    "verify_webhook",
+    "verify_webhook_signature",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
